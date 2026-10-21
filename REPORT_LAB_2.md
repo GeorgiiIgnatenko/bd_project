@@ -77,27 +77,40 @@
 ### Запрос 1 (Q1): Персонализированная лента пользователя (SC-03, БП-8, БП-9)
 **Бизнес-смысл:** Формирование ленты новостей за окно актуальности (30 дней), где материалы из подписок пользователя идут первыми (приоритетный блок), а остальные — вторым блоком.
 ```sql
+-- Шаг 1: источники, на которые подписан пользователь
+WITH user_sources AS (
+    SELECT source_id
+    FROM subscription_source
+    WHERE user_id = 1
+),
+-- Шаг 2: активные категории, на которые подписан пользователь
+user_categories AS (
+    SELECT sc.category_id
+    FROM subscription_category sc
+    JOIN category c ON c.id = sc.category_id
+    WHERE sc.user_id = 1
+      AND c.is_active
+      AND c.name <> 'Без категории'
+),
+-- Шаг 3: id новостей, попадающих в приоритетные категории
+priority_news AS (
+    SELECT DISTINCT nc.news_id
+    FROM news_category nc
+    JOIN user_categories uc ON uc.category_id = nc.category_id
+)
 SELECT n.id,
-    n.title,
-    s.name AS source,
-    n.published_at,
-    (
-        EXISTS (
-            SELECT 1 FROM subscription_source ss
-            WHERE ss.user_id = 1 AND ss.source_id = n.source_id
-              AND s.status NOT IN ('неактивен', 'отключён вручную')
-        )
-        OR
-        EXISTS (
-            SELECT 1 FROM news_category nc
-            JOIN subscription_category sc ON sc.category_id = nc.category_id
-            JOIN category c ON c.id = nc.category_id
-            WHERE nc.news_id = n.id AND sc.user_id = 1
-              AND c.is_active AND c.name <> 'Без категории'
-        )
-    ) AS is_priority
+       n.title,
+       s.name  AS source,
+       n.published_at,
+       (
+           (s.status NOT IN ('неактивен', 'отключён вручную')
+            AND us.source_id IS NOT NULL)   -- подписан на источник
+           OR pn.news_id IS NOT NULL        -- подписан на категорию
+       ) AS is_priority
 FROM news n
-JOIN news_source s ON s.id = n.source_id
+JOIN news_source s       ON s.id = n.source_id
+LEFT JOIN user_sources us   ON us.source_id = n.source_id
+LEFT JOIN priority_news pn  ON pn.news_id   = n.id
 WHERE n.published_at >= TIMESTAMPTZ '2026-10-01 00:00:00+00' - (30 * INTERVAL '1 day')
 ORDER BY is_priority DESC, n.published_at DESC
 LIMIT 5 OFFSET 0;

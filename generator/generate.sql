@@ -35,6 +35,7 @@ SET LOCAL search_path TO :"schema", pg_catalog;
 \ir ../migrations/001_init.up.sql
 \ir ../migrations/002_add_scrape_run_status_check.up.sql
 \ir ../migrations/003_model_consistency.up.sql
+\ir ../migrations/004_add_trgm_indexes.up.sql
 
 SELECT jsonb_build_object(
   'generator_version', 3, 'mode', mode, 'seed', seed,
