@@ -1,4 +1,8 @@
 .env
+.env.*
+!.env.example
+.secrets/
+*.pgpass
 __pycache__/
 *.pyc
 .DS_Store

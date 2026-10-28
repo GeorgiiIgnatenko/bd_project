@@ -1,15 +1,41 @@
 name: bd-news-labs
 
+x-client: &client
+  image: postgres:18
+  depends_on:
+    postgres:
+      condition: service_healthy
+  environment: &client-environment
+    PGHOST: postgres
+    PGPORT: 5432
+    PGDATABASE: ${POSTGRES_DB:-news_aggregator}
+  # Mount code explicitly so client containers cannot read the project's .env.
+  volumes:
+    - ./sql:/workspace/sql:ro
+    - ./security:/workspace/security:ro
+    - ./migrations:/workspace/migrations:ro
+    - ./tests:/workspace/tests:ro
+    - ./generator:/workspace/generator:ro
+    - ./run_checks.sql:/workspace/run_checks.sql:ro
+    - ./run_demo.sql:/workspace/run_demo.sql:ro
+    - ./run_queries.sql:/workspace/run_queries.sql:ro
+    - ./run_seed_only.sql:/workspace/run_seed_only.sql:ro
+  working_dir: /workspace
+  entrypoint: [psql, -X, -w, -v, ON_ERROR_STOP=1]
+
 services:
   postgres:
     image: postgres:18
     environment:
       POSTGRES_DB: ${POSTGRES_DB:-news_aggregator}
-      POSTGRES_USER: ${POSTGRES_USER:-news_app}
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-news_local_password}
+      POSTGRES_USER: news_bootstrap
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?Run sh start.sh}
+      ADMIN_PASSWORD: ${ADMIN_PASSWORD:?Run sh start.sh}
+      APP_PASSWORD: ${APP_PASSWORD:?Run sh start.sh}
+      ANALYST_PASSWORD: ${ANALYST_PASSWORD:?Run sh start.sh}
       POSTGRES_INITDB_ARGS: --encoding=UTF8
       TZ: Asia/Novosibirsk
-    command: [postgres, -c, timezone=Asia/Novosibirsk]
+    command: [postgres, -c, timezone=Asia/Novosibirsk, -c, hba_file=/workspace/security/pg_hba.conf, -c, ident_file=/workspace/security/pg_ident.conf]
     ports:
       - "127.0.0.1:${POSTGRES_PORT:-55432}:5432"
     volumes:
@@ -17,59 +43,53 @@ services:
       - .:/workspace:ro
       - ./docker/00-init.sql:/docker-entrypoint-initdb.d/00-init.sql:ro
     healthcheck:
-      test: [CMD-SHELL, 'pg_isready -h 127.0.0.1 -U "$$POSTGRES_USER" -d "$$POSTGRES_DB"']
+      test: [CMD-SHELL, 'pg_isready -U news_bootstrap -d "$$POSTGRES_DB"']
       interval: 3s
       timeout: 3s
       retries: 20
       start_period: 5s
 
-  checks:
-    image: postgres:18
-    profiles: [checks]
-    depends_on:
-      postgres:
-        condition: service_healthy
+  admin:
+    <<: *client
+    profiles: [tools]
     environment:
-      PGHOST: postgres
-      PGDATABASE: ${POSTGRES_DB:-news_aggregator}
-      PGUSER: ${POSTGRES_USER:-news_app}
-      PGPASSWORD: ${POSTGRES_PASSWORD:-news_local_password}
-    volumes:
-      - .:/workspace:ro
-    working_dir: /workspace
-    entrypoint: [psql, -X, -v, ON_ERROR_STOP=1, -f, run_checks.sql]
+      <<: *client-environment
+      PGUSER: news_admin
+      PGPASSWORD: ${ADMIN_PASSWORD:?Run sh start.sh}
+
+  app:
+    <<: *client
+    profiles: [tools]
+    environment:
+      <<: *client-environment
+      PGUSER: news_app
+      PGPASSWORD: ${APP_PASSWORD:?Run sh start.sh}
+
+  analyst:
+    <<: *client
+    profiles: [tools]
+    environment:
+      <<: *client-environment
+      PGUSER: news_analyst
+      PGPASSWORD: ${ANALYST_PASSWORD:?Run sh start.sh}
+
+  checks:
+    extends:
+      service: admin
+    profiles: [checks]
+    command: [-f, run_checks.sql]
 
   queries:
-    image: postgres:18
+    extends:
+      service: app
     profiles: [queries]
-    depends_on:
-      postgres:
-        condition: service_healthy
-    environment:
-      PGHOST: postgres
-      PGDATABASE: ${POSTGRES_DB:-news_aggregator}
-      PGUSER: ${POSTGRES_USER:-news_app}
-      PGPASSWORD: ${POSTGRES_PASSWORD:-news_local_password}
-    volumes:
-      - .:/workspace:ro
-    working_dir: /workspace
-    entrypoint: [psql, -X, -v, ON_ERROR_STOP=1, -f, run_queries.sql]
-  
+    command: [-f, run_queries.sql]
+
   seed_only:
-    image: postgres:18
+    extends:
+      service: admin
     profiles: [seed_only]
-    depends_on:
-      postgres:
-        condition: service_healthy
-    environment:
-      PGHOST: postgres
-      PGDATABASE: ${POSTGRES_DB:-news_aggregator}
-      PGUSER: ${POSTGRES_USER:-news_app}
-      PGPASSWORD: ${POSTGRES_PASSWORD:-news_local_password}
-    volumes:
-      - .:/workspace:ro
-    working_dir: /workspace
-    entrypoint: [psql, -X, -v, ON_ERROR_STOP=1, -f, run_seed_only.sql]
-    
+    command: [-f, run_seed_only.sql]
+
 volumes:
   pgdata:

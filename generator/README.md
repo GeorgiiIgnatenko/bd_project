@@ -1,17 +1,18 @@
 # Генератор данных · КТ-03
 
-Генератор создаёт схему `dev` или `load`, применяет миграции 001–003 и заполняет
+Генератор создаёт схему `dev` или `load`, применяет миграции 001–004 и заполняет
 все 12 таблиц агрегатора новостей. Данные сохраняются после завершения.
 Основная схема `public` не меняется. Пошаговый запуск и примеры чтения данных:
 [главный README](../README.md).
 
 ## Запуск
 
-Нужны Docker с Compose v2 и обычный `sh`. Python и дополнительные библиотеки не нужны.
+Нужны Docker с Compose v2 и обычный `sh`. Для первоначального создания `.env`
+используется Python 3; сам генератор выполняется в PostgreSQL без дополнительных библиотек.
 Команды выполняются из корня репозитория.
 
 ```sh
-docker compose up -d --wait postgres
+sh start.sh
 
 # Разработка: схема dev, 80 000 новостей.
 sh generator/run.sh dev 42
@@ -40,7 +41,7 @@ sh generator/run.sh load 42
 `Generation committed in schema ...` и код выхода 0. Повторная проверка готовых данных:
 
 ```sh
-docker compose exec -T postgres sh -c 'exec psql -X -v ON_ERROR_STOP=1 -U "$POSTGRES_USER" -d "$POSTGRES_DB" -v mode=dev -f /workspace/generator/verify.sql'
+docker compose run --rm -T admin -v mode=dev -f /workspace/generator/verify.sql
 ```
 
 Для нагрузочного набора замените `-v mode=dev` на `-v mode=load`.

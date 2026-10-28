@@ -2,14 +2,32 @@
 
 ## Запуск базы
 
-Нужен Docker с Compose v2.
+Нужны Docker с Compose v2 и Python 3 для подготовки `.env`.
 
 ```sh
-docker compose up -d --wait postgres
+sh start.sh
 ```
 
 При первом запуске создаётся схема PostgreSQL 18. Данные и сценарии автоматически
 не загружаются. База доступна на `127.0.0.1:55432`.
+
+При отсутствии `.env` он создаётся из `.env.example` со случайными паролями.
+Существующие значения сохраняются. Роли в старом томе обновляются автоматически.
+
+## Доступы · четвёртая лабораторная
+
+`news_admin` управляет схемой и данными; `news_app` выполняет операции приложения;
+`news_analyst` только читает публикации и статистику. Все три роли без прав
+суперпользователя. Пароли хранятся в локальном `.env`, который исключён из Git.
+
+```sh
+docker compose run --rm admin       # консоль администратора
+docker compose run --rm app         # консоль приложения
+docker compose run --rm analyst     # консоль аналитика
+sh security/demo.sh                 # разрешённые и запрещённые операции
+```
+
+Права, обновление старой базы и работа с секретами: [security/README.md](security/README.md).
 
 ## Запуск тестов
 
@@ -69,7 +87,7 @@ sh generator/run.sh load 42
 Открыть консоль базы:
 
 ```sh
-docker compose exec postgres sh -c 'exec psql -X -U "$POSTGRES_USER" -d "$POSTGRES_DB"'
+docker compose run --rm admin
 ```
 
 Дальше команды выполняются внутри `psql`. Посмотреть схемы и таблицы:
@@ -144,7 +162,7 @@ ORDER BY status;
 Повторно проверить объёмы и бизнес-ограничения сгенерированного набора:
 
 ```sh
-docker compose exec -T postgres sh -c 'exec psql -X -v ON_ERROR_STOP=1 -U "$POSTGRES_USER" -d "$POSTGRES_DB" -v mode=dev -f /workspace/generator/verify.sql'
+docker compose run --rm -T admin -v mode=dev -f /workspace/generator/verify.sql
 ```
 
 Для нагрузочного набора замените `-v mode=dev` на `-v mode=load`.
@@ -166,6 +184,7 @@ docker compose exec -T postgres sh -c 'exec psql -X -v ON_ERROR_STOP=1 -U "$POST
 | `sql/transactions/` | Многошаговая транзакция
 | `tests/` | Автоматические проверки схемы, данных и сценариев |
 | `generator/` | Генератор данных для третьей лабы и инструкция запуска |
+| `security/` | Роли, права, инструкция по секретам и демонстрация доступов |
 | `compose.yaml` | Сервисы PostgreSQL и проверок |
 | `run_checks.sql` | Запуск тестов с откатом изменений |
 | `run_demo.sql` | Загрузка данных и сценариев в основную базу |

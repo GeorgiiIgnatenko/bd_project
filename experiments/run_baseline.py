@@ -2,13 +2,9 @@ import subprocess
 import json
 import os
 
-DB_CONFIG = {
-    'host': '127.0.0.1',
-    'port': '55432',
-    'user': 'news_app',
-    'dbname': 'news_aggregator',
-    'password': 'news_local_password'
-}
+from db_connection import connection
+
+DB_ARGS, ENV = connection()
 
 QUERIES = {
     'Q1': {
@@ -334,15 +330,9 @@ ORDER BY failed_runs DESC, s.id;
 }
 
 def run_psql(sql):
-    env = os.environ.copy()
-    env['PGPASSWORD'] = DB_CONFIG['password']
-    env['PAGER'] = 'cat'
-    res = subprocess.run([
-        'psql', '-h', DB_CONFIG['host'], '-p', DB_CONFIG['port'],
-        '-U', DB_CONFIG['user'], '-d', DB_CONFIG['dbname'],
-        '-X', '-P', 'pager=off', '-c', sql
-    ], capture_output=True, text=True, env=env)
+    res = subprocess.run(DB_ARGS + ['-c', sql], capture_output=True, text=True, env=ENV)
     return res.stdout, res.stderr
+
 
 def main():
     report = []

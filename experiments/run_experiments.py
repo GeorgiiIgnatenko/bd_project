@@ -5,16 +5,9 @@ import os
 import time
 import threading
 
-ENV = os.environ.copy()
-ENV['PGPASSWORD'] = 'news_local_password'
-ENV['PAGER'] = 'cat'
-ENV['PATH'] = '/usr/bin:/bin:/usr/local/bin'
+from db_connection import connection
 
-DB_ARGS = [
-    'psql', '-h', '127.0.0.1', '-p', '55432',
-    '-U', 'news_app', '-d', 'news_aggregator',
-    '-X', '-P', 'pager=off'
-]
+DB_ARGS, ENV = connection()
 
 def run_sql(sql):
     res = subprocess.run(DB_ARGS + ['-c', sql], capture_output=True, text=True, env=ENV)

@@ -31,7 +31,8 @@ INSERT INTO generation_config VALUES (
 SELECT mode AS schema FROM generation_config \gset
 DROP SCHEMA IF EXISTS :"schema" CASCADE;
 CREATE SCHEMA :"schema";
-SET LOCAL search_path TO :"schema", pg_catalog;
+-- Shared pg_trgm operator classes are installed in public by initial migrations.
+SET LOCAL search_path TO :"schema", public, pg_catalog;
 \ir ../migrations/001_init.up.sql
 \ir ../migrations/002_add_scrape_run_status_check.up.sql
 \ir ../migrations/003_model_consistency.up.sql

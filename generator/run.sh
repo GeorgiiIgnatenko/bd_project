@@ -18,8 +18,6 @@ esac
 
 project_dir=$(CDPATH= cd -- "$(dirname -- "$0")/.." && pwd)
 cd "$project_dir"
-exec docker compose exec -T postgres sh -c '
-  exec psql -X -v ON_ERROR_STOP=1 -U "$POSTGRES_USER" -d "$POSTGRES_DB" \
-    -v mode="$1" -v seed="$2" \
-    -f /workspace/generator/generate.sql
-' sh "$mode" "$seed"
+exec docker compose run --rm -T admin \
+  -v mode="$mode" -v seed="$seed" \
+  -f /workspace/generator/generate.sql -f /workspace/security/grants.sql
