@@ -29,6 +29,38 @@ sh security/demo.sh                 # разрешённые и запрещён
 
 Права, обновление старой базы и работа с секретами: [security/README.md](security/README.md).
 
+## RLS и аудит · четвёртая лабораторная
+
+### RLS
+
+Миграция `005_add_rls` включает Row-Level Security на `favorite`, `subscription_category` и `subscription_source`. Роль `news_app` видит и меняет только строки, где `user_id` равен `app.current_user_id`. Приложение задаёт его в начале транзакции:
+
+```sql
+SET LOCAL app.current_user_id = '<id из app_user>';
+```
+
+Без этой настройки `news_app` не видит строк и ничего не может добавить. `news_admin` владеет таблицами и RLS обходит, `news_analyst` личные таблицы не видит.
+
+### Аудит
+
+Миграция `006_add_audit` создаёт `audit_log` и триггеры на INSERT, UPDATE, DELETE таблиц `app_user`, `news_source`, `news`, `favorite`, `subscription_category`, `subscription_source`, `news_category`.
+
+В журнал пишутся время, роль БД, `app.current_user_id`, таблица, операция, старая и новая строка. Хеш пароля не сохраняется, при его смене ставится флаг `password_changed`.
+
+У `news_app` и `news_analyst` прав на `audit_log` нет, читает журнал только `news_admin`, а UPDATE, DELETE и TRUNCATE журнала запрещены триггером.
+
+```sh
+sh scripts/view_audit.sh   # последние 15 записей
+```
+
+### Проверка
+
+```sh
+bash tests/audit_rls_tests/run_rls_audit_tests.sh
+```
+
+Успех: 25 сообщений `PASS` и `ALL SECURITY TESTS PASSED`. Тест всё откатывает.
+
 ## Запуск тестов
 
 ```sh
@@ -189,3 +221,5 @@ docker compose run --rm -T admin -v mode=dev -f /workspace/generator/verify.sql
 | `run_checks.sql` | Запуск тестов с откатом изменений |
 | `run_demo.sql` | Загрузка данных и сценариев в основную базу |
 | `.env.example` | Пример настроек подключения |
+| `tests/audit_rls_tests/` | Тест RLS и аудита под реальными ролями |
+| `scripts/` | Просмотр журнала аудита |
