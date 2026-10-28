@@ -7,5 +7,7 @@ SET LOCAL ROLE news_admin;
 \ir /workspace/migrations/002_add_scrape_run_status_check.up.sql
 \ir /workspace/migrations/003_model_consistency.up.sql
 \ir /workspace/migrations/004_add_trgm_indexes.up.sql
+\ir /workspace/migrations/005_add_rls.up.sql
+\ir /workspace/migrations/006_add_audit.up.sql
 \ir /workspace/security/grants.sql
 COMMIT;
