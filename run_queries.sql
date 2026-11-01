@@ -1,4 +1,7 @@
 \set ON_ERROR_STOP on
+\ir sql/query_parameters.sql
+BEGIN READ ONLY;
+SET LOCAL app.current_user_id TO :'user_id';
 
 \echo  'q1: персонализированная лента'
 \ir sql/queries/q1_personal_feed.sql
@@ -15,3 +18,4 @@
 \echo 'q5: проблемные источники'
 \ir sql/queries/q5_problem_sources.sql
 \echo 'All queries completed successfully'
+COMMIT;

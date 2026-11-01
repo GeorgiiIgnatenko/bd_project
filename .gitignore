@@ -15,3 +15,8 @@ experiments/*.txt
 /local/
 /source/
 /docs/source/
+
+# Local project context and generated verification reports.
+/openspec/
+/artifacts/
+/AGENTS.md

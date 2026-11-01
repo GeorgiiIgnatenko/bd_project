@@ -4,12 +4,7 @@
 --      первым блоком, остальные вторым, оба блока по дате (новые сверху)?
 -- Параметры: user_id, window_days (окно актуальности, 30),
 --            page_size (20), page_offset (0)
--- user_id определяется по нему email
-SELECT id AS user_id FROM app_user WHERE email = 'ivan.petrov@example.com' \gset
-SET app.current_user_id TO :'user_id';
-\set window_days 30 
-\set page_size 20 
-\set page_offset 0
+-- user_id задаётся вызывающим кодом; контекст RLS устанавливается через SET LOCAL.
 SELECT n.id,
     n.title,
     s.name AS source,
@@ -37,7 +32,8 @@ SELECT n.id,
     ) AS is_priority
 FROM news n
     JOIN news_source s ON s.id = n.source_id
-WHERE n.published_at >= NOW() - (:window_days * INTERVAL '1 day')
+WHERE n.published_at >= :'as_of'::timestamptz - (:window_days * INTERVAL '1 day')
+  AND n.published_at < :'as_of'::timestamptz
 ORDER BY is_priority DESC,
-    n.published_at DESC
+    n.published_at DESC, n.id DESC
 LIMIT :page_size OFFSET :page_offset;

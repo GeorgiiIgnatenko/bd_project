@@ -1,23 +1,20 @@
--- q5 
--- Проблемные источники (HAVING) (SC-06, БП-7)
--- Бизнес-вопрос: у каких источников за последние дни было не меньше N
---   неудачных запусков сбора (кандидаты на перевод в «неактивен»)?
--- Параметры: days (период), min_failed_runs (N; по БП-7 равно 3,
---   для демонстрации используется 1)
-\set days 7
-\set min_failed_runs 1
-
-SELECT s.id,
-       s.name,
-       s.status,
-       COUNT(DISTINCT r.id) AS failed_runs,
-       COUNT(e.id)          AS error_records,
-       MAX(e.created_at)    AS last_error_at
+-- Q5: у каких источников >= N неудачных запусков за период?
+-- Параметры: as_of, days, min_failed_runs. Роль: news_analyst или news_admin.
+-- Это кандидаты для диагностики; N ошибок за период не означает N подряд.
+WITH failed AS (
+    SELECT r.source_id, r.id, count(e.id) AS error_records,
+           max(e.created_at) AS last_error_at
+    FROM scrape_run r
+    LEFT JOIN scrape_error_log e ON e.scrape_run_id = r.id
+    WHERE r.status = 'ошибка'
+      AND r.started_at >= :'as_of'::timestamptz - (:days * INTERVAL '1 day')
+      AND r.started_at < :'as_of'::timestamptz
+    GROUP BY r.source_id, r.id
+)
+SELECT s.id, s.name, s.status, count(*) AS failed_runs,
+       sum(f.error_records)::bigint AS error_records, max(f.last_error_at) AS last_error_at
 FROM news_source s
-JOIN scrape_run r            ON r.source_id = s.id
-                            AND r.status = 'ошибка'
-                            AND r.started_at >= NOW() - (:days * INTERVAL '1 day')
-LEFT JOIN scrape_error_log e ON e.scrape_run_id = r.id
+JOIN failed f ON f.source_id = s.id
 GROUP BY s.id, s.name, s.status
-HAVING COUNT(DISTINCT r.id) >= :min_failed_runs
+HAVING count(*) >= :min_failed_runs
 ORDER BY failed_runs DESC, s.id;

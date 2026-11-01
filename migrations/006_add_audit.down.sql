@@ -1,5 +1,3 @@
-BEGIN;
-
 DROP TRIGGER IF EXISTS audit_log_no_truncate
     ON public.audit_log;
 
@@ -31,5 +29,3 @@ DROP FUNCTION IF EXISTS public.prevent_audit_log_mutation();
 DROP FUNCTION IF EXISTS public.audit_row_change();
 
 DROP TABLE IF EXISTS public.audit_log;
-
-COMMIT;

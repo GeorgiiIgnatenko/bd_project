@@ -1,9 +1,8 @@
--- q3. 
+-- q4.
 -- Статистика сбора по источникам (SC-05, SC-06)
 -- Бизнес-вопрос: сколько запусков сбора было у каждого источника за период
 --   и чем закончилась обработка материалов (успех / дубликат / ошибка)?
 -- Параметры: date_from
-\set date_from '2026-01-01'
 
 SELECT s.id,
        s.name,
@@ -15,6 +14,7 @@ SELECT s.id,
 FROM news_source s
 LEFT JOIN scrape_run r     ON r.source_id = s.id
                           AND r.started_at >= :'date_from'
+                          AND r.started_at < :'as_of'::timestamptz
 LEFT JOIN import_result ir ON ir.scrape_run_id = r.id
 GROUP BY s.id, s.name, s.status
 ORDER BY s.id;

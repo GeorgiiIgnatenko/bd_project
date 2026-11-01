@@ -1,13 +1,6 @@
 \set ON_ERROR_STOP on
 \ir /workspace/security/bootstrap.sql
 \ir /workspace/security/roles.sql
-BEGIN;
-SET LOCAL ROLE news_admin;
-\ir /workspace/migrations/001_init.up.sql
-\ir /workspace/migrations/002_add_scrape_run_status_check.up.sql
-\ir /workspace/migrations/003_model_consistency.up.sql
-\ir /workspace/migrations/004_add_trgm_indexes.up.sql
-\ir /workspace/migrations/005_add_rls.up.sql
-\ir /workspace/migrations/006_add_audit.up.sql
-\ir /workspace/security/grants.sql
-COMMIT;
+-- Schema migrations run from start.sh after the server becomes healthy.
+-- pg_stat_statements requires bootstrap; application roles cannot install it.
+CREATE EXTENSION IF NOT EXISTS pg_stat_statements;

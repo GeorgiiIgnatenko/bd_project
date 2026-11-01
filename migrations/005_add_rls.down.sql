@@ -1,5 +1,3 @@
-BEGIN;
-
 DROP POLICY IF EXISTS favorite_user_policy
     ON public.favorite;
 
@@ -17,5 +15,3 @@ DROP POLICY IF EXISTS subscription_source_user_policy
 
 ALTER TABLE public.subscription_source
     DISABLE ROW LEVEL SECURITY;
-
-COMMIT;

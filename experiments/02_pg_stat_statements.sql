@@ -1,41 +1,16 @@
--- ==============================================================================
--- 2. НАСТРОЙКА И ОТЧЕТ ПО PG_STAT_STATEMENTS
--- ==============================================================================
-
--- 1. Подключение расширения
-CREATE EXTENSION IF NOT EXISTS pg_stat_statements;
-
--- Сброс статистики перед сбором профиля
-SELECT pg_stat_statements_reset();
-
--- 2. Диагностический запрос: Топ-10 наиболее ресурсоемких запросов по суммарному времени (total_exec_time)
-SELECT 
-    queryid,
-    calls,
-    ROUND(total_exec_time::numeric, 2) AS total_exec_time_ms,
-    ROUND(mean_exec_time::numeric, 2) AS mean_exec_time_ms,
-    ROUND(min_exec_time::numeric, 2) AS min_exec_time_ms,
-    ROUND(max_exec_time::numeric, 2) AS max_exec_time_ms,
-    rows,
-    shared_blks_hit,
-    shared_blks_read,
-    ROUND((100.0 * shared_blks_hit / NULLIF(shared_blks_hit + shared_blks_read, 0))::numeric, 2) AS cache_hit_pct,
-    SUBSTRING(REGEXP_REPLACE(query, '\s+', ' ', 'g') FROM 1 FOR 100) AS query_preview
-FROM pg_stat_statements
-WHERE query NOT LIKE '%pg_stat_statements%'
-  AND query NOT LIKE '%SET search_path%'
+-- Extension installed by bootstrap; preload configured in compose.yaml.
+-- Only our administrator's SELECT workload in this database. Never dump
+-- bootstrap/role-management statements into a public report.
+SELECT queryid, calls, round(total_exec_time::numeric, 3) AS total_ms,
+       round(mean_exec_time::numeric, 3) AS mean_ms, rows,
+       shared_blks_hit, shared_blks_read,
+       left(regexp_replace(query, '\s+', ' ', 'g'), 160) AS query_preview
+FROM public.pg_stat_statements
+WHERE dbid = (SELECT oid FROM pg_database WHERE datname = current_database())
+  AND userid = (SELECT oid FROM pg_roles WHERE rolname = 'news_admin')
+  AND query NOT ILIKE '%pg_stat_statements%'
+  AND query ~* '^(SELECT|WITH)[[:space:]]'
+  AND (query ILIKE '%FROM news n%' OR query ILIKE '%FROM news_source s%'
+       OR query ILIKE '%FROM news_category nc%' OR query ILIKE '%FROM scrape_run r%')
 ORDER BY total_exec_time DESC
-LIMIT 10;
-
--- 3. Диагностический запрос: Топ запросов по операциям дискового ввода-вывода (shared_blks_read)
-SELECT 
-    queryid,
-    calls,
-    shared_blks_read,
-    shared_blks_hit,
-    ROUND(mean_exec_time::numeric, 2) AS mean_exec_time_ms,
-    SUBSTRING(REGEXP_REPLACE(query, '\s+', ' ', 'g') FROM 1 FOR 100) AS query_preview
-FROM pg_stat_statements
-WHERE query NOT LIKE '%pg_stat_statements%'
-ORDER BY shared_blks_read DESC
 LIMIT 10;

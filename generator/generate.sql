@@ -55,6 +55,8 @@ $$;
 
 \ir populate.sql
 \ir validate.sql
+-- Build the diagnostic indexes once after bulk insertion.
+\ir ../migrations/007_error_query_indexes.up.sql
 
 -- RESTART is transactional, unlike setval: failures also restore sequence states.
 DO $$

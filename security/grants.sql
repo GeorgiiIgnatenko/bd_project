@@ -1,14 +1,24 @@
 \set ON_ERROR_STOP on
 -- Applicable both by bootstrap and by the project owner after migrations/generation.
 DO $$
-DECLARE schema_name text; table_name text; sequence_name text; permission record;
+DECLARE schema_name text; table_name text; sequence_name text; permission record; item record;
 BEGIN
   FOR schema_name IN SELECT nspname FROM pg_namespace
-    WHERE nspname IN ('public', 'dev', 'load', 'lab3_dev', 'lab3_load')
+    WHERE nspname IN ('public', 'dev', 'load')
   LOOP
     EXECUTE format('REVOKE ALL ON SCHEMA %I FROM PUBLIC, news_app, news_analyst', schema_name);
-    EXECUTE format('REVOKE ALL ON ALL TABLES IN SCHEMA %I FROM PUBLIC, news_app, news_analyst', schema_name);
-    EXECUTE format('REVOKE ALL ON ALL SEQUENCES IN SCHEMA %I FROM PUBLIC, news_app, news_analyst', schema_name);
+    -- Extension views belong to bootstrap, not the project administrator.
+    -- Revoke project permissions without changing extension ownership or ACLs.
+    FOR item IN SELECT c.relname, c.relkind FROM pg_class c
+      JOIN pg_namespace n ON n.oid=c.relnamespace
+      WHERE n.nspname=schema_name AND c.relkind IN ('r','p','v','m','S')
+        AND c.relowner=(SELECT oid FROM pg_roles WHERE rolname='news_admin')
+        AND NOT EXISTS (SELECT 1 FROM pg_depend d WHERE d.classid='pg_class'::regclass
+                        AND d.objid=c.oid AND d.deptype='e')
+    LOOP
+      EXECUTE format('REVOKE ALL ON %s %I.%I FROM PUBLIC, news_app, news_analyst',
+        CASE WHEN item.relkind='S' THEN 'SEQUENCE' ELSE 'TABLE' END, schema_name, item.relname);
+    END LOOP;
     EXECUTE format('GRANT USAGE ON SCHEMA %I TO news_analyst', schema_name);
     -- Analytics gets public content and collection metrics, not accounts/preferences.
     FOREACH table_name IN ARRAY ARRAY[

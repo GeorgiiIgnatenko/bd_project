@@ -1,3 +1,4 @@
+#!/usr/bin/env bash
 set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
@@ -8,20 +9,7 @@ TEST_PATH="/workspace/tests/audit_rls_tests/security_rls_audit.sql"
 
 echo "Запуск тестов безопасности (RLS, аудит)"
 
-docker compose up -d postgres
-echo "Ожидание готовности PostgreSQL"
-for i in $(seq 1 60); do
-    if docker compose exec -T postgres \
-        pg_isready -U news_bootstrap -d "${POSTGRES_DB:-news_aggregator}" \
-        >/dev/null 2>&1; then
-        break
-    fi
-    if [ "$i" -eq 60 ]; then
-        echo "Ошибка: PostgreSQL не стала готовой за 60 секунд."
-        exit 1
-    fi
-    sleep 1
-done
+docker compose up -d --wait postgres
 
 docker compose exec -T postgres sh -c '
     exec psql -X -w \
