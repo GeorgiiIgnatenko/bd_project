@@ -6,6 +6,7 @@
 --            page_size (20), page_offset (0)
 -- user_id определяется по нему email
 SELECT id AS user_id FROM app_user WHERE email = 'ivan.petrov@example.com' \gset
+SET app.current_user_id TO :'user_id';
 \set window_days 30 
 \set page_size 20 
 \set page_offset 0
