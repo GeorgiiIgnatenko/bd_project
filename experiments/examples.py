@@ -1,4 +1,4 @@
-"""Save small result examples for all five canonical business queries."""
+"""Сохранить небольшие примеры результатов всех запросов SQL-каталога."""
 from experiments.benchmark import setup
 from scripts.db import ROOT, run_sql
 
@@ -11,7 +11,7 @@ def main():
         # The report shows only the first five rows; production Q2 has no forced limit.
         output = run_sql(setup('dev') + f"SELECT * FROM (\n{body}\n) AS example LIMIT 5;\nROLLBACK;")
         (directory / f'{path.stem}.txt').write_text(output)
-    print('PASS: five result examples saved in artifacts/queries')
+    print('PASS: примеры всех запросов сохранены в artifacts/queries')
 
 
 if __name__ == "__main__":

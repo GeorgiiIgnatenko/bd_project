@@ -67,6 +67,22 @@ COMMIT;"""
 SELECT NULLIF(current_setting('app.current_user_id', true), '') IS NULL
   AND NOT EXISTS (SELECT 1 FROM favorite);""", role='app', database=database, tuples=True).strip() == 't'
         report.append('PASS: Q1 result under real news_app login equals the intended user feed\n')
+        # Полные UTC-сутки включают свежий seed и дают непустые примеры Q6–Q8.
+        analytics_as_of = run_sql("""SELECT
+          (date_trunc('day', now() AT TIME ZONE 'UTC') + INTERVAL '1 day')
+          AT TIME ZONE 'UTC';""", database=database, tuples=True).strip()
+        for name in ('q6_category_source_ranking.sql', 'q7_source_publication_gaps.sql',
+                     'q8_source_daily_trend.sql'):
+            body = (ROOT / 'sql/queries' / name).read_text().strip().rstrip(';')
+            statement = f"""BEGIN READ ONLY;
+\\set as_of '{analytics_as_of}'
+\\ir /workspace/sql/query_parameters.sql
+SELECT jsonb_agg(row_to_json(result)) FROM (\n{body}\n) result;
+COMMIT;"""
+            expected = run_sql(statement, database=database, tuples=True)
+            actual = run_sql(statement, database=database, role='analyst', tuples=True)
+            assert actual == expected and actual.strip(), f'{name}: analyst result differs or is empty'
+            report.append(f'PASS: {name} — одинаковый непустой результат news_admin/news_analyst\n')
         for role in ("admin", "app", "analyst"):
             sql(f"\\ir /workspace/security/demo_{role}.sql", role)
         sql("\\ir /workspace/tests/audit_rls_tests/security_rls_audit.sql", "bootstrap")

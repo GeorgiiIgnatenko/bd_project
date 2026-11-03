@@ -31,7 +31,8 @@ def main():
     path = project / '.env'
     existing = read_env(path)
     values = read_env(project / '.env.example') | existing
-    for key in ('POSTGRES_PASSWORD', 'ADMIN_PASSWORD', 'APP_PASSWORD', 'ANALYST_PASSWORD'):
+    for key in ('POSTGRES_PASSWORD', 'ADMIN_PASSWORD', 'APP_PASSWORD',
+                'ANALYST_PASSWORD', 'REPLICATION_PASSWORD'):
         if not values.get(key):
             values[key] = secrets.token_urlsafe(32)
     values.pop('DB_SECRETS_DIR', None)
