@@ -17,5 +17,14 @@ SET LOCAL app.current_user_id TO :'user_id';
 
 \echo 'q5: проблемные источники'
 \ir sql/queries/q5_problem_sources.sql
+
+\echo 'q6: рейтинг источников внутри категорий'
+\ir sql/queries/q6_category_source_ranking.sql
+
+\echo 'q7: интервалы между публикациями источников'
+\ir sql/queries/q7_source_publication_gaps.sql
+
+\echo 'q8: ежедневная динамика публикаций источника'
+\ir sql/queries/q8_source_daily_trend.sql
 \echo 'All queries completed successfully'
 COMMIT;

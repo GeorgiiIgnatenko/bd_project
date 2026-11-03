@@ -39,3 +39,11 @@
 \else
   \set min_failed_runs 1
 \endif
+\if :{?top_ranks}
+\else
+  \set top_ranks 3
+\endif
+\if :{?source_id}
+\else
+  \set source_id 1
+\endif
