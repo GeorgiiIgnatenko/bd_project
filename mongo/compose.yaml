@@ -1,0 +1,23 @@
+name: bd-news-mongo
+
+services:
+  mongo:
+    image: mongo:8.0
+    # Учебный клиент работает через docker exec в этом же контейнере.
+    # Нет сети с PostgreSQL, опубликованных портов или внешнего доступа.
+    network_mode: none
+    command: [mongod, --bind_ip, "127.0.0.1"]
+    volumes:
+      - mongo_data:/data/db
+      - mongo_config:/data/configdb
+      - .:/workspace/mongo:ro
+    healthcheck:
+      test: [CMD, mongosh, --quiet, --norc, --eval, "quit(db.adminCommand({ping: 1}).ok ? 0 : 1)"]
+      interval: 3s
+      timeout: 5s
+      retries: 20
+      start_period: 5s
+
+volumes:
+  mongo_data:
+  mongo_config:
