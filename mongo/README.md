@@ -89,4 +89,4 @@ docker compose -f mongo/compose.yaml -p bd-news-mongo exec -T \
 [журнал архитектурных решений](../docs/kt-05-decisions.md),
 [подробный отчёт и маршрут защиты](../docs/lab5-report.md).
 
-Эксперимент: `python3 -m scripts.mongo growth`. В отдельном временном проекте измеряются 7 длин массива для 3 профилей заметок. [Результаты и безопасная граница](../docs/lab5-team-report.md).
+Сравнение с PostgreSQL: запустите `sh start.sh`, затем `python3 -m scripts.mongo compare`. На двух подборках проверяются снимки до и после изменения личной заметки. [Разбор и ожидаемый результат](../docs/lab5-team-report.md).
