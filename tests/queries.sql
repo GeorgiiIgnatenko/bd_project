@@ -164,4 +164,35 @@ SELECT check_that('Q8: существующий источник без публ
 CREATE TEMP TABLE q8_missing ON COMMIT DROP AS
 -- @query q8_source_daily_trend.sql
 SELECT check_that('Q8: неизвестный источник даёт пустой результат', NOT EXISTS (TABLE q8_missing));
+-- Изолированное по датам окно: новая неподписанная статья и две статьи подписки.
+INSERT INTO category(id, name) OVERRIDING SYSTEM VALUE VALUES (-8301, 'feed_test_category');
+INSERT INTO subscription_category VALUES (1, -8301);
+INSERT INTO news(id, source_id, canonical_url, title, content, published_at)
+OVERRIDING SYSTEM VALUE VALUES
+(-8301,-8101,'https://query.invalid/feed1','MATCH report','Review','2040-01-01 01:00+00'),
+(-8302,-8101,'https://query.invalid/feed2','Review','match report','2040-01-01 02:00+00'),
+(-8303,-8101,'https://query.invalid/feed3','Match','Review','2040-01-01 03:00+00'),
+(-8304,-8101,'https://query.invalid/feed4','Preview','Review','2039-01-01 00:00+00');
+INSERT INTO news_category VALUES (-8301,-8301),(-8302,-8301),(-8303,-8101),(-8304,-8301);
+\set user_id 1
+\set as_of '2040-01-02 00:00+00'
+\set window_days 1
+\set page_size 1
+\set page_offset 0
+CREATE TEMP TABLE q1_first ON COMMIT DROP AS
+-- @query q1_personal_feed.sql
+SELECT check_that('Q1: первая строка — самая свежая из подписанной категории',
+  (SELECT count(*)=1 AND bool_and(id=-8302 AND is_priority) FROM q1_first));
+\set page_offset 2
+CREATE TEMP TABLE q1_last ON COMMIT DROP AS
+-- @query q1_personal_feed.sql
+SELECT check_that('Q1: новая неподписанная статья идёт после двух приоритетных',
+  (SELECT count(*)=1 AND bool_and(id=-8303 AND NOT is_priority) FROM q1_last));
+
+\set search_text mAtCh
+\set category_name feed_test_category
+CREATE TEMP TABLE q2_actual ON COMMIT DROP AS
+-- @query q2_search_by_category.sql
+SELECT check_that('Q2: совпадение в заголовке или тексте только внутри категории',
+  (SELECT array_agg(id ORDER BY id) = ARRAY[-8302,-8301]::bigint[] FROM q2_actual));
 ROLLBACK;

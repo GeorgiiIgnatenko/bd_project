@@ -11,11 +11,12 @@ PROJECT = "bd-news-mongo"
 
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("action", choices=("up", "demo", "verify", "down"))
+    parser.add_argument("action", choices=("up", "demo", "verify", "growth", "down"))
     args = parser.parse_args()
     token = uuid.uuid4().hex[:8]
-    project = f"{PROJECT}-check-{token}" if args.action == "verify" else PROJECT
-    database = f"lab5_check_{token}" if args.action == "verify" else "lab5_demo"
+    temporary = args.action in ("verify", "growth")
+    project = f"{PROJECT}-check-{token}" if temporary else PROJECT
+    database = f"lab5_check_{token}" if temporary else "lab5_demo"
     report = []
     directory = ROOT / "artifacts" / "mongo"
     directory.mkdir(parents=True, exist_ok=True)
@@ -53,6 +54,8 @@ def main():
             command("up", "-d", "--wait", "--wait-timeout", "90", "mongo")
             if args.action == "demo":
                 shell("demo.js")
+            elif args.action == "growth":
+                shell("growth.js")
             elif args.action == "verify":
                 shell("verify.js")
                 shell("failure_probe.js", probe="validation", expected_error="Document failed validation")
@@ -60,11 +63,11 @@ def main():
                 shell("failure_probe.js", name="public", expected_error="Запрещена неучебная БД")
     finally:
         try:
-            if args.action == "verify":
+            if temporary:
                 # Только случайный проект этой проверки, никогда основной demo/SQL.
                 command("down", "--volumes", "--remove-orphans")
         finally:
-            path = directory / (f"verify-{token}.txt" if args.action == "verify" else f"{args.action}.txt")
+            path = directory / (f"{args.action}-{token}.txt" if temporary else f"{args.action}.txt")
             path.write_text("\n".join(report))
             print(f"Журнал: {path.relative_to(ROOT)}", flush=True)
     print(f"PASS: MongoDB {args.action}")

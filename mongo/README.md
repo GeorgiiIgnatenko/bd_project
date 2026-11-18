@@ -88,3 +88,5 @@ docker compose -f mongo/compose.yaml -p bd-news-mongo exec -T \
 [Модель и обоснование](../docs/kt-05-mongodb-docs.md),
 [журнал архитектурных решений](../docs/kt-05-decisions.md),
 [подробный отчёт и маршрут защиты](../docs/lab5-report.md).
+
+Эксперимент: `python3 -m scripts.mongo growth`. В отдельном временном проекте измеряются 7 длин массива для 3 профилей заметок. [Результаты и безопасная граница](../docs/lab5-team-report.md).
